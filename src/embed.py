@@ -58,6 +58,15 @@ def save_embeddings(emb_dict: dict, filename: str):
     np.save(out_path, emb_dict)
     print(f"Saved {len(emb_dict)} embeddings to {out_path}")
 
+def read_embeddings(filename: str) -> dict:
+    """
+    Load embeddings from a .npy file.
+    """
+    emb_path = os.path.join(OUTPUT_DIR, filename)
+    if not os.path.exists(emb_path):
+        raise FileNotFoundError(f"File {emb_path} does not exist.")
+    return np.load(emb_path, allow_pickle=True).item()
+
 if __name__ == "__main__":
     # 1. Embed product images
     prod_embs = embed_directory(PRODUCT_IMAGES_DIR)
@@ -66,3 +75,16 @@ if __name__ == "__main__":
     # 2. Embed query images
     query_embs = embed_directory(QUERY_IMAGES_DIR)
     save_embeddings(query_embs, "query_clip_embeddings.npy")
+
+    # 3. Load and verify embeddings
+    loaded_prod_embs = read_embeddings("../embeddings/product_clip_embeddings.npy")
+    loaded_query_embs = read_embeddings("../embeddings/query_clip_embeddings.npy")
+    print(f"Loaded {len(loaded_prod_embs)} product embeddings.")
+    print(f"Loaded {len(loaded_query_embs)} query embeddings.")
+    # Example: print first 3 product IDs and their embeddings
+    for pid, emb in list(loaded_prod_embs.items())[:3]:
+        print(f"Product ID: {pid}, Embedding: {emb[:5]}...")  # Print first 5 values
+    # Example: print first 3 query IDs and their embeddings
+    for qid, emb in list(loaded_query_embs.items())[:3]:
+        print(f"Query ID: {qid}, Embedding: {emb[:5]}...")  # Print first 5 values
+    

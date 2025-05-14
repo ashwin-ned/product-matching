@@ -1,7 +1,3 @@
-# src/matcher.py
-"""
-Match a text or image query against product embeddings stored in Pinecone and show metadata.
-"""
 import os
 import argparse
 import numpy as np
@@ -10,23 +6,24 @@ import torch
 from transformers import CLIPProcessor, CLIPModel
 
 # Local modules
-from vector_db import query_vector, create_index, upsert_embeddings
-from metadata_db import MetadataDB
+from vector_db import query_vector, create_index
+from mongo_db import MongoDB
 
 # Configuration
-MODEL_NAME         = "openai/clip-vit-base-patch32"
+MODEL_NAME = "openai/clip-vit-base-patch32"
 PRODUCT_IMAGES_DIR = os.path.join(os.path.dirname(__file__), "..", "images")
-DEVICE             = "cuda" if torch.cuda.is_available() else "cpu"
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 class Matcher:
     def __init__(self, model_name: str = MODEL_NAME):
         # Load CLIP model + processor
-        self.device    = DEVICE
-        self.model     = CLIPModel.from_pretrained(model_name).to(self.device)
+        self.device = DEVICE
+        self.model = CLIPModel.from_pretrained(model_name).to(self.device)
         self.processor = CLIPProcessor.from_pretrained(model_name)
         self.model.eval()
-        # Metadata DB
-        self.meta_db = MetadataDB()
+
+        # Initialize MongoDB metadata store
+        self.meta_db = MongoDB()
 
     def embed_image(self, image_path: str) -> np.ndarray:
         img = Image.open(image_path).convert("RGB")
@@ -44,16 +41,31 @@ class Matcher:
         return emb[0].cpu().numpy().astype(np.float32)
 
     def match(self, query_emb: np.ndarray, top_k: int = 5):
-        # Ensure Pinecone index exists and has data
-        create_index()
-        # upsert_embeddings()  # run once, not every query
-        # Query Pinecone
-        matches = query_vector(query_emb, top_k=top_k)
-        # Fetch metadata
-        results = []
+        # Query with buffer to account for duplicates
+        buffer = top_k * 2  # Adjust based on expected duplicates
+        matches = query_vector(query_emb, top_k=buffer)
+
+        # Deduplicate by product ID, keeping the highest-scoring instance
+        seen = set()
+        unique_matches = []
         for pid, score in matches:
-            meta = self.meta_db.get_product(pid)
-            results.append({"id": pid, "score": score, "metadata": meta})
+            base_pid = pid.split("_")[0]  # Extract base product ID (e.g., "001")
+            if base_pid not in seen:
+                seen.add(base_pid)
+                unique_matches.append((pid, score))
+            if len(unique_matches) >= top_k:
+                break  # Early exit if we have enough unique products
+
+        # Fetch metadata for the top K unique products
+        results = []
+        for pid, score in unique_matches[:top_k]:
+            meta = self.meta_db.get_product(pid.split("_")[0])  # Fetch base product metadata
+            results.append({
+                "id": pid.split("_")[0],  # Return base product ID
+                "score": score,
+                "metadata": meta
+            })
+        
         return results
 
     def display(self, results: list):
@@ -61,25 +73,34 @@ class Matcher:
         for res in results:
             pid = res['id']
             score = res['score']
-            meta = res['metadata'] or {}
+            meta = res.get('metadata', {}) or {}
+
             print(f"• {pid} (score: {score:.4f})")
+            # Always print raw metadata for clarity
+            print(f"  Raw metadata: {meta}")
+
             if meta:
-                print(f"  Name: {meta.get('name')}")
-                print(f"  Category: {meta.get('category')}")
-                print(f"  Price: {meta.get('price')}")
+                print("  Parsed Metadata:")
+                for k, v in meta.items():
+                    print(f"    {k}: {v}")
+
+            # Optionally show image if exists
             img_path = os.path.join(PRODUCT_IMAGES_DIR, f"{pid}.jpg")
             if os.path.exists(img_path):
-                img = Image.open(img_path)
-                img.show()
+                try:
+                    img = Image.open(img_path)
+                    img.show()
+                except Exception as e:
+                    print(f"  [Error displaying image: {e}]")
             print()
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Match a text or image query against product embeddings.")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--image", type=str, help="Path to query image")
-    group.add_argument("--text",  type=str, help="Text query")
-    parser.add_argument("--top_k", type=int, default=2)
+    group.add_argument("--text", type=str, help="Text query string")
+    parser.add_argument("--top_k", type=int, default=1, help="Number of top matches to return")
     args = parser.parse_args()
 
     matcher = Matcher()

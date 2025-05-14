@@ -30,5 +30,13 @@
     "price": 7.25,
     "description": "Hydrating body lotion with floral scent, enriched with almond oil.",
     "images": ["004_1.jpg", "004_2.jpg"]
+  },
+  {
+    "id": "005",
+    "name": "Loacker Cremekakao Wafers",
+    "category": "Food & Snacks",
+    "price": 8.25,
+    "description": "Pack of 3 wafer biscuits with rich cacao filling.",
+    "images": ["005_1.jpg", "005_2.jpg"]
   }
 ]
