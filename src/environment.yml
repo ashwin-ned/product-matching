@@ -1,0 +1,35 @@
+name: product-matcher
+channels:
+  - defaults
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.10
+  - pip
+
+  # Core libraries
+  - numpy
+  - pillow
+  - pymongo
+  - python-dotenv
+
+  # PyTorch & CLIP
+  - pytorch=2.1
+  - torchvision
+  - cudatoolkit=11.8  # or your local CUDA version
+
+  # Transformers
+  - transformers
+
+  # Pinecone client
+  - pip:
+      - pinecone-client
+
+  # Web + API
+  - fastapi
+  - uvicorn
+  - gradio
+
+  # Logging
+  - loguru
+

@@ -1,0 +1,34 @@
+[
+  {
+    "id": "001",
+    "name": "Hanuta Hazelnut Wafer Box",
+    "category": "Food & Snacks",
+    "price": 3.20,
+    "description": "Pack of 8 wafer sandwiches with creamy hazelnut filling.",
+    "images": ["001_1.jpg", "001_2.jpg"]
+  },
+  {
+    "id": "002",
+    "name": "Vanilla & Coconut Shower Gel",
+    "category": "Personal Care",
+    "price": 5.49,
+    "description": "Refreshing shower gel with vanilla fragrance and coconut extracts.",
+    "images": ["002_1.jpg", "002_2.jpg"]
+  },
+  {
+    "id": "003",
+    "name": "adidas Unisex T-Shirt",
+    "category": "Clothing",
+    "price": 19.99,
+    "description": "Classic adidas tee available in black and blue. 100% cotton.",
+    "images": ["003_1.jpg", "003_2.jpg"]
+  },
+  {
+    "id": "004",
+    "name": "Nivea Floral Love Body Lotion",
+    "category": "Beauty & Skincare",
+    "price": 7.25,
+    "description": "Hydrating body lotion with floral scent, enriched with almond oil.",
+    "images": ["004_1.jpg", "004_2.jpg"]
+  }
+]
