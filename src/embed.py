@@ -9,30 +9,39 @@ import numpy as np
 from PIL import Image
 import torch
 from transformers import CLIPProcessor, CLIPModel
+from concurrent.futures import ThreadPoolExecutor
+from logging import getLogger
 
 # Configuration
 MODEL_NAME = "openai/clip-vit-base-patch32"
-PRODUCT_IMAGES_DIR = os.path.join(os.path.dirname(__file__), "..", "images")
-QUERY_IMAGES_DIR   = os.path.join(os.path.dirname(__file__), "..", "query_images")
-OUTPUT_DIR         = os.path.join(os.path.dirname(__file__), "..", "embeddings")
-DEVICE             = "cuda" if torch.cuda.is_available() else "cpu"
+PRODUCT_IMAGES_DIR = os.getenv("PRODUCT_IMAGES_DIR", os.path.join(os.path.dirname(__file__), "..", "images"))
+QUERY_IMAGES_DIR = os.getenv("QUERY_IMAGES_DIR", os.path.join(os.path.dirname(__file__), "..", "query_images"))
+OUTPUT_DIR = os.getenv("OUTPUT_DIR", os.path.join(os.path.dirname(__file__), "..", "embeddings"))
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Initialize model + processor
 model = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
 processor = CLIPProcessor.from_pretrained(MODEL_NAME)
 model.eval()
 
+# Logger
+logger = getLogger(__name__)
+
 def embed_image(image_path: str) -> np.ndarray:
     """
     Load an image, preprocess it, and return a normalized CLIP embedding vector.
     """
-    image = Image.open(image_path).convert("RGB")
-    inputs = processor(images=image, return_tensors="pt").to(DEVICE)
-    with torch.no_grad():
-        emb = model.get_image_features(**inputs)
-    # L2-normalize for cosine similarity
-    emb = emb / emb.norm(p=2, dim=-1, keepdim=True)
-    return emb[0].cpu().numpy().astype(np.float32)
+    try:
+        image = Image.open(image_path).convert("RGB")
+        inputs = processor(images=image, return_tensors="pt").to(DEVICE)
+        with torch.no_grad():
+            emb = model.get_image_features(**inputs)
+        # L2-normalize for cosine similarity
+        emb = emb / emb.norm(p=2, dim=-1, keepdim=True)
+        return emb[0].cpu().numpy().astype(np.float32)
+    except Exception as e:
+        logger.error(f"Error embedding image {image_path}: {e}")
+        return None
 
 def embed_directory(image_dir: str) -> dict:
     """
@@ -40,13 +49,22 @@ def embed_directory(image_dir: str) -> dict:
     Returns: { image_id: embedding }
     """
     embeddings = {}
-    for fname in sorted(os.listdir(image_dir)):
-        if not fname.lower().endswith((".jpg", ".jpeg", ".png")):
-            continue
-        image_id = os.path.splitext(fname)[0]
-        path = os.path.join(image_dir, fname)
-        embeddings[image_id] = embed_image(path)
-        print(f"Embedded {image_id}")
+    image_files = [
+        os.path.join(image_dir, fname)
+        for fname in sorted(os.listdir(image_dir))
+        if fname.lower().endswith((".jpg", ".jpeg", ".png"))
+    ]
+
+    def process_image(image_path):
+        image_id = os.path.splitext(os.path.basename(image_path))[0]
+        emb = embed_image(image_path)
+        if emb is not None:
+            embeddings[image_id] = emb
+            logger.info(f"Embedded {image_id}")
+
+    with ThreadPoolExecutor() as executor:
+        executor.map(process_image, image_files)
+
     return embeddings
 
 def save_embeddings(emb_dict: dict, filename: str):
@@ -56,7 +74,7 @@ def save_embeddings(emb_dict: dict, filename: str):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     out_path = os.path.join(OUTPUT_DIR, filename)
     np.save(out_path, emb_dict)
-    print(f"Saved {len(emb_dict)} embeddings to {out_path}")
+    logger.info(f"Saved {len(emb_dict)} embeddings to {out_path}")
 
 def read_embeddings(filename: str) -> dict:
     """
@@ -64,7 +82,8 @@ def read_embeddings(filename: str) -> dict:
     """
     emb_path = os.path.join(OUTPUT_DIR, filename)
     if not os.path.exists(emb_path):
-        raise FileNotFoundError(f"File {emb_path} does not exist.")
+        logger.error(f"File {emb_path} does not exist.")
+        return {}
     return np.load(emb_path, allow_pickle=True).item()
 
 if __name__ == "__main__":
@@ -87,4 +106,3 @@ if __name__ == "__main__":
     # Example: print first 3 query IDs and their embeddings
     for qid, emb in list(loaded_query_embs.items())[:3]:
         print(f"Query ID: {qid}, Embedding: {emb[:5]}...")  # Print first 5 values
-    

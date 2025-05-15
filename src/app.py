@@ -92,7 +92,8 @@ with gr.Blocks(title="Product Search Demo") as demo:
                 image_input = gr.Image(type="filepath", label="Upload query image")
         
         with gr.Column():
-            top_k = gr.Slider(1, 8, value=3, step=1, label="Number of results to show")
+            top_k = gr.Slider(1, 5, value=3, step=1, label="Number of results to show")
+            top_match_only = gr.Checkbox(label="Retrieve only the top match", value=False)
             threshold = gr.Slider(0, 1, value=0.3, step=0.05, label="Score threshold")
 
     submit_btn = gr.Button("Search", variant="primary")
@@ -102,9 +103,18 @@ with gr.Blocks(title="Product Search Demo") as demo:
     text_tab.select(fn=clear_image, inputs=None, outputs=image_input)
     image_tab.select(fn=clear_text, inputs=None, outputs=text_input)
     
+    def process_query_with_top_match(text_query: str, image_query: str, top_k: int, top_match_only: bool, threshold: float) -> str:
+        """Process the query and return formatted results as HTML"""
+        # Override top_k if top_match_only is checked
+        if top_match_only:
+            top_k = 1
+
+        # Process the query as before
+        return process_query(text_query, image_query, top_k, threshold)
+
     submit_btn.click(
-        fn=process_query,
-        inputs=[text_input, image_input, top_k, threshold],
+        fn=process_query_with_top_match,
+        inputs=[text_input, image_input, top_k, top_match_only, threshold],
         outputs=output
     )
 
@@ -115,10 +125,10 @@ with gr.Blocks(title="Product Search Demo") as demo:
       - Image Search: Upload a product photo to find similar items
     - **Parameters**:
       - Number of Results: Controls how many matches to return (1-8)
-      - Score Threshold: Filters out matches below this similarity score (0-1)
+      - Score Threshold: Filters out matches below this similarity score (0-1) [Reccomend 0.2 for text, 0.6 for image]
     - Results show: Product images, match scores, and metadata
     - Switch between tabs to automatically clear previous input type
     """)
 
 if __name__ == "__main__":
-    demo.launch(share=False) 
+    demo.launch(share=True)

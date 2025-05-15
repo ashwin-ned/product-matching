@@ -20,6 +20,8 @@ VECTOR_DIM       = 512  # CLIP output dim
 # Initialize Pinecone client
 pc = Pinecone(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
 
+# Create a global reference to the index
+index = pc.Index(INDEX_NAME)
 
 def create_index():
     """
@@ -46,12 +48,11 @@ def create_index():
             raise e
 
 
-def upsert_embeddings(batch_size: int = 100):
+def upsert_embeddings(batch_size: int = 50):
     """
     Load embeddings from local file and upsert to Pinecone in batches.
     """
     data = np.load(EMB_PATH, allow_pickle=True).item()  # {id: vector}
-    index = pc.Index(INDEX_NAME)
 
     items = [(pid, vec.tolist()) for pid, vec in data.items()]
     for i in range(0, len(items), batch_size):
@@ -61,13 +62,13 @@ def upsert_embeddings(batch_size: int = 100):
     print("All embeddings upserted into Pinecone.")
 
 
-def query_vector(query_vec: np.ndarray, top_k: int = 5, namespace: str = None):
+def query_vector(query_vec: np.ndarray, top_k: int = 2, namespace: str = None):
     """
     Query Pinecone for nearest neighbors to query_vec.
     Returns list of (id, score).
     """
     try:
-        index = pc.Index(INDEX_NAME)
+        # Reuse the already-initialized index instead of creating a new one
         response = index.query(
             vector=query_vec.tolist(),
             top_k=top_k,

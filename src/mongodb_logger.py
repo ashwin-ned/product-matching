@@ -20,7 +20,7 @@ MONGO_URI = os.getenv("LOGGER_MONGO_URI")
 DB_NAME = os.getenv("LOGGER_DB_NAME")
 COLLECTION_NAME = os.getenv("LOGGER_MONGO_COLLECTION")
 
-print(f"MongoDB URI: {MONGO_URI}, DB: {DB_NAME}, Collection: {COLLECTION_NAME}")
+print(f"Starting MongoDB logger with URI: {MONGO_URI}")
 
 # Initialize MongoDB connection
 try:

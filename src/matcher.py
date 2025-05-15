@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import torch
 from transformers import CLIPProcessor, CLIPModel
+from concurrent.futures import ThreadPoolExecutor
 
 # Local modules
 from vector_db import query_vector
@@ -51,31 +52,51 @@ class Matcher:
             return np.zeros((512,), dtype=np.float32)
 
     def match(self, query_emb: np.ndarray, top_k: int = 5):
-        # Query with buffer to account for duplicates
-        buffer = top_k * 2  # Adjust based on expected duplicates
-        matches = query_vector(query_emb, top_k=buffer)
-
-        # Deduplicate by product ID, keeping the highest-scoring instance
-        seen = set()
+        """
+        Match the query embedding against the vector database and fetch metadata for the top results.
+        Dynamically adjusts the query buffer size and parallelizes metadata fetching for speed.
+        """
+        buffer = top_k  # Start with a buffer equal to top_k
         unique_matches = []
-        for pid, score in matches:
-            base_pid = pid.split("_")[0]  # Extract base product ID (e.g., "001")
-            if base_pid not in seen:
-                seen.add(base_pid)
-                unique_matches.append((pid, score))
-            if len(unique_matches) >= top_k:
-                break  # Early exit if we have enough unique products
 
-        # Fetch metadata for the top K unique products
+        while True:
+            # Query the vector database
+            matches = query_vector(query_emb, top_k=buffer)
+
+            # Deduplicate by product ID, keeping the highest-scoring instance
+            seen = set()
+            unique_matches = []
+            for pid, score in matches:
+                base_pid = pid.split("_")[0]  # Extract base product ID (e.g., "001")
+                if base_pid not in seen:
+                    seen.add(base_pid)
+                    unique_matches.append((pid, score))
+                if len(unique_matches) >= top_k:
+                    break  # Early exit if we have enough unique products
+
+            # If we have enough unique matches or the buffer is too large, stop querying
+            if len(unique_matches) >= top_k or buffer > top_k * 10:
+                break
+
+            # Increase the buffer size for the next iteration
+            buffer *= 2
+
+        # Fetch metadata for the top K unique products in parallel
+        def fetch_metadata(pid):
+            return self.meta_db.get_product(pid.split("_")[0])  # Fetch base product metadata
+
+        with ThreadPoolExecutor() as executor:
+            metadata = list(executor.map(fetch_metadata, [pid for pid, _ in unique_matches[:top_k]]))
+
+        # Combine results with metadata
         results = []
-        for pid, score in unique_matches[:top_k]:
-            meta = self.meta_db.get_product(pid.split("_")[0])  # Fetch base product metadata
+        for (pid, score), meta in zip(unique_matches[:top_k], metadata):
             results.append({
                 "id": pid.split("_")[0],  # Return base product ID
                 "score": score,
                 "metadata": meta
             })
-        
+
         return results
 
     def display(self, results: list):
@@ -123,8 +144,4 @@ def main():
     matcher.display(results)
 
 if __name__ == "__main__":
-    import time
-    time_start = time.time()
     main()
-    time_end = time.time()
-    print(f"Total time taken: {time_end - time_start:.2f} seconds")
