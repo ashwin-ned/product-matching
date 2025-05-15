@@ -98,7 +98,7 @@ with gr.Blocks(title="Product Search Demo") as demo:
     submit_btn = gr.Button("Search", variant="primary")
     output = gr.HTML(label="Search Results")
     
-    # Clear inputs when switching tabs (FIXED)
+    # Clear inputs when switching tabs
     text_tab.select(fn=clear_image, inputs=None, outputs=image_input)
     image_tab.select(fn=clear_text, inputs=None, outputs=text_input)
     
@@ -115,10 +115,10 @@ with gr.Blocks(title="Product Search Demo") as demo:
       - Image Search: Upload a product photo to find similar items
     - **Parameters**:
       - Number of Results: Controls how many matches to return (1-8)
-      - Score Threshold: Filters out matches below this similarity score (0-1) [Recommended: 0.3]
+      - Score Threshold: Filters out matches below this similarity score (0-1)
     - Results show: Product images, match scores, and metadata
     - Switch between tabs to automatically clear previous input type
     """)
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(share=False) 

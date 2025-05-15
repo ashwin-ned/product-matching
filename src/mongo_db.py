@@ -13,9 +13,12 @@ from pymongo import MongoClient
 from pymongo import server_api
 from pymongo.collection import Collection
 from pymongo.errors import PyMongoError
+from dotenv import load_dotenv
+from mongodb_logger import log_event
 
+load_dotenv()
 # Configuration via environment variables
-MONGO_URI        = os.getenv("MONGO_URI", "mongodb+srv://ashwinnedungaditud:AIQPsioHfBgy88Mn@productmatching.lpsolgi.mongodb.net/?retryWrites=true&w=majority&appName=productmatching")
+MONGO_URI        = os.getenv("MONGO_URI")
 MONGO_DB_NAME    = os.getenv("MONGO_DB", "productdb")
 MONGO_COLLECTION = os.getenv("MONGO_COLLECTION", "products")
 
@@ -34,8 +37,10 @@ class MongoDB:
             self.db = self.client[db_name]
             self.collection: Collection = self.db[collection_name]
         except PyMongoError as e:
+            log_event("error", f"MongoDB connection error: {e}")
             raise RuntimeError(f"Failed to connect to MongoDB: {e}")
-
+        
+        
     def add_product(self, product_id: str, metadata: dict) -> None:
         """
         Insert or update product metadata.
@@ -48,6 +53,7 @@ class MongoDB:
                 upsert=True
             )
         except PyMongoError as e:
+            log_event("error", f"Failed to add/update product {product_id}: {e}")
             raise RuntimeError(f"Failed to add/update product {product_id}: {e}")
 
     def get_product(self, product_id: str) -> dict:
@@ -69,6 +75,7 @@ class MongoDB:
             cursor = self.collection.find({}, {"_id": 1}).limit(limit)
             return [str(doc["_id"]) for doc in cursor]
         except PyMongoError as e:
+            log_event("error", f"Failed to list products: {e}")
             raise RuntimeError(f"Failed to list products: {e}")
         
 if __name__ == "__main__":

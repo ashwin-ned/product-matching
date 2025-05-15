@@ -6,8 +6,9 @@ import torch
 from transformers import CLIPProcessor, CLIPModel
 
 # Local modules
-from vector_db import query_vector, create_index
+from vector_db import query_vector
 from mongo_db import MongoDB
+from mongodb_logger import log_event
 
 # Configuration
 MODEL_NAME = "openai/clip-vit-base-patch32"
@@ -26,19 +27,28 @@ class Matcher:
         self.meta_db = MongoDB()
 
     def embed_image(self, image_path: str) -> np.ndarray:
-        img = Image.open(image_path).convert("RGB")
-        inputs = self.processor(images=img, return_tensors="pt").to(self.device)
-        with torch.no_grad():
-            emb = self.model.get_image_features(**inputs)
-        emb = emb / emb.norm(p=2, dim=-1, keepdim=True)
-        return emb[0].cpu().numpy().astype(np.float32)
 
+        try:
+            img = Image.open(image_path).convert("RGB")
+            inputs = self.processor(images=img, return_tensors="pt").to(self.device)
+            with torch.no_grad():
+                emb = self.model.get_image_features(**inputs)
+            emb = emb / emb.norm(p=2, dim=-1, keepdim=True)
+            return emb[0].cpu().numpy().astype(np.float32)
+        except Exception as e:
+            log_event(f"Error embedding image '{image_path}': {e}")
+            return np.zeros((512,), dtype=np.float32)
+        
     def embed_text(self, text: str) -> np.ndarray:
-        inputs = self.processor(text=[text], return_tensors="pt", padding=True).to(self.device)
-        with torch.no_grad():
-            emb = self.model.get_text_features(**inputs)
-        emb = emb / emb.norm(p=2, dim=-1, keepdim=True)
-        return emb[0].cpu().numpy().astype(np.float32)
+        try:
+            inputs = self.processor(text=[text], return_tensors="pt", padding=True).to(self.device)
+            with torch.no_grad():
+                emb = self.model.get_text_features(**inputs)
+            emb = emb / emb.norm(p=2, dim=-1, keepdim=True)
+            return emb[0].cpu().numpy().astype(np.float32)
+        except Exception as e:
+            log_event(f"Error embedding text '{text}': {e}")
+            return np.zeros((512,), dtype=np.float32)
 
     def match(self, query_emb: np.ndarray, top_k: int = 5):
         # Query with buffer to account for duplicates
@@ -91,7 +101,7 @@ class Matcher:
                     img = Image.open(img_path)
                     img.show()
                 except Exception as e:
-                    print(f"  [Error displaying image: {e}]")
+                    log_event(f"Error displaying image for {pid}: {e}")
             print()
 
 
@@ -100,7 +110,7 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--image", type=str, help="Path to query image")
     group.add_argument("--text", type=str, help="Text query string")
-    parser.add_argument("--top_k", type=int, default=1, help="Number of top matches to return")
+    parser.add_argument("--top_k", type=int, default=2, help="Number of top matches to return")
     args = parser.parse_args()
 
     matcher = Matcher()
@@ -113,4 +123,8 @@ def main():
     matcher.display(results)
 
 if __name__ == "__main__":
+    import time
+    time_start = time.time()
     main()
+    time_end = time.time()
+    print(f"Total time taken: {time_end - time_start:.2f} seconds")
