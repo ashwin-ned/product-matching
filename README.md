@@ -1,6 +1,6 @@
 # Semantic Product Matching with CLIP Embeddings
 
-An end-to-end pipeline for visual product matching using multimodal embeddings and vector search.
+An end-to-end pipeline for semantic product search using multimodal CLIP embeddings and vector search.
 
 ## 📺 Demo
 
@@ -15,13 +15,14 @@ This system enables matching an input image or text query against a product cata
 1.  **CLIP (Contrastive Language-Image Pre-training)**: Generates 512-dimensional joint embeddings for images and text.
 2.  **Pinecone**: A high-performance vector database used for efficient nearest-neighbors search using embeddings.
 3.  **MongoDB**: Stores and retrieves structured product metadata.
+4.  **ONNX-Runtime**: Optimizes CLIP for faster inference
 
-### 🔄 Architecture Flow
+### 🔄 Pipeline
 
 The matching process follows these steps:
 
 1.  **Input Processing**:
-    *   An input image or text query is provided to the CLIP model.
+    *   An input image or text query is provided to the CLIP model on Gradio.
     *   CLIP generates a 512-dimensional embedding vector representing the input.
 2.  **Vector Search**:
     *   The generated embedding is used to query the Pinecone vector database.
@@ -37,12 +38,11 @@ The matching process follows these steps:
 .
 ├── app.py                  # Gradio demo interface
 ├── data_ingestion.py       # Script to process images & metadata
-├── embeddings/             # Locally stored image embeddings 
 ├── images/                 # Product images (for ingestion)
 ├── media/                  # Demo GIFs and other assets
 ├── metadata/               # JSON metadata files
-├── models/                 # Original or quantized CLIP weights
-├── quantization/           # Utilities for model quantization
+├── models/                 # For storing quantized model (FP32 & FP16)
+├── quantization/           # Scripts for model quantization
 ├── .env                    # Environment file with API keys for Pinecone & MongoDB
 ├── environment.yml         # Conda environment file
 └── requirements.txt        # Python dependencies
