@@ -129,5 +129,5 @@ Follow these steps to set up and run the project:
 
 Once the Gradio demo is running:
 
-*   **Image Query**: Upload a photo of a product. The application will display the top-K matching products from the catalog or the top match.
-*   **Text Query**: Type a description of a product. The application will perform the same embedding and search process to find and display the top-K matches.
+*   **Image Query**: Upload a photo of a product. The application will display the top match (check button) or top-K matching products from the catalog or the top match.
+*   **Text Query**: Type a description of a product. The application will perform the same embedding and search process to find and display the top matches.
