@@ -40,10 +40,12 @@ The matching process follows these steps:
 ├── images/                 # Product images (for ingestion)
 ├── media/                  # Demo GIFs and other assets
 ├── metadata/               # JSON metadata files
-├── models/                 # Original & quantized CLIP weights
+├── models/                 # Original or quantized CLIP weights
 ├── quantization/           # Utilities for model quantization
-├── quantize_model.py       # Standalone quantization script
+├── .env                    # Environment file with API keys for Pinecone & MongoDB
+├── environment.yml         # Conda environment file
 └── requirements.txt        # Python dependencies
+
 ```
 
 ---
@@ -56,12 +58,13 @@ Follow these steps to set up and run the project:
     ```bash
     git clone https://github.com/yourusername/product-matching-pipeline.git
     cd product-matching-pipeline
+    conda env create -f environment.yml
     pip install -r requirements.txt
     ```
 
 2.  **Prepare Images and Metadata**:
-    *   Place all product images in the `./images/` directory.
-    *   Create a single JSON file named `products.json` in the `./metadata/` directory. This file should contain an array of product entries.
+    *   Place all product images in the `images/` directory.
+    *   Create a single JSON file named `products.json` in the `metadata/` directory. This file should contain an array of product entries.
 
     **Example `products.json` entry**:
     ```json
@@ -102,8 +105,6 @@ Follow these steps to set up and run the project:
     ```bash
     python quantization/quantize_model.py
     ```
-    *(Note: Ensure the script path `quantization/quantize_model.py` is correct. Your workspace shows `quantize_model.py` in `src/`.)*
-
 6.  **Run the Gradio Demo**:
     Launch the web interface:
     ```bash
