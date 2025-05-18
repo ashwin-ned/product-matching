@@ -1,2 +1,3 @@
 # Ignore the 'models' directory
 models/
+.env
