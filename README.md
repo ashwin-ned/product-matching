@@ -89,16 +89,19 @@ Follow these steps to set up and run the project:
 3.  **Configure Environment Variables**:
     Create a `.env` file in the project's `src/` folder (or the root and adjust paths in scripts if necessary) with the following keys:
     ```env
-    MONGO_URI="your_mongo_connection_string"
-    MONGO_DB_NAME="your_db_name"
-    MONGO_COLLECTION="products_collection_name"
+    # Pinecone Configuration
+    PINECONE_API_KEY="your_pinecone_api_key"
+    PINECONE_ENV="your_pinecone_env" # e.g., us-west1-gcp, aws-us-east-1, etc.
+    PINECONE_INDEX="your_pinecone_index" # Or your desired Pinecone index name
+
+    # Configuration via environment variables
+    MONGO_URI="your_mongo_db_connection_string"
+    MONGO_DB_NAME="your_mongo_db_name"
+    MONGO_COLLECTION="your_mongo_db_collection_name"
 
     LOGGER_MONGO_URI="your_logger_connection_string"
     LOGGER_DB_NAME="your_logger_db_name"
     LOGGER_MONGO_COLLECTION="your_logger_collection_name"
-
-    PINECONE_API_KEY="your_pinecone_api_key"
-    PINECONE_ENVIRONMENT="your_pinecone_env"
     ```
 4.  **Quantize the Model**:
     To optimize the model for inference, run the quantization script in `./quantization/quantize_clip.py`. (optionally test that the models are quantized correctly with `./quantization/test_inference.py`):
