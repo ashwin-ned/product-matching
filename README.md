@@ -64,7 +64,7 @@ Follow these steps to set up and run the project:
 
 1.  **Clone the Repository and Install Dependencies**:
     ```bash
-    git clone https://github.com/yourusername/product-matching-pipeline.git
+    git clone https://github.com/ashwin-ned/product-matching.git
     cd product-matching-pipeline
     conda env create -f environment.yml
     
