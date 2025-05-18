@@ -1,11 +1,6 @@
-# mongo_db.py
-
 """
 MongoDB metadata store for product information.
-Uses a `products` collection keyed by product_id.
-
-PyMongo tutorial: MongoClient example :contentReference[oaicite:0]{index=0}  
-Connection URI options: MongoDB URI format :contentReference[oaicite:1]{index=1}
+Uses a products collection keyed by product_id.
 """
 import os, random
 import json

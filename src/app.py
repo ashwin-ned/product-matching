@@ -25,7 +25,7 @@ def process_query(text_query: str, image_query: str, top_k: int, threshold: floa
         score = res['score']
         meta = res.get('metadata', {}) or {}
         
-        # Find all image instances using wildcard
+        # Find all image instances using wildcardf
         img_html = ""
         try:
             pattern = os.path.join(PRODUCT_IMAGES_DIR, f"{pid}_*.jpg")
@@ -92,9 +92,9 @@ with gr.Blocks(title="Product Search Demo") as demo:
                 image_input = gr.Image(type="filepath", label="Upload query image")
         
         with gr.Column():
-            top_k = gr.Slider(1, 5, value=3, step=1, label="Number of results to show")
-            top_match_only = gr.Checkbox(label="Retrieve only the top match", value=False)
-            threshold = gr.Slider(0, 1, value=0.3, step=0.05, label="Score threshold")
+            top_k = gr.Slider(1, 5, value=1, step=1, label="Number of results to show")
+            top_match_only = gr.Checkbox(label="Retrieve only the top match", value=True)
+            threshold = gr.Slider(0, 1, value=0.2, step=0.05, label="Score threshold")
 
     submit_btn = gr.Button("Search", variant="primary")
     output = gr.HTML(label="Search Results")

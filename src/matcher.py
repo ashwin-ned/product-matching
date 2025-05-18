@@ -3,7 +3,8 @@ import argparse
 import numpy as np
 from PIL import Image
 import torch
-from transformers import CLIPProcessor, CLIPModel
+from transformers import CLIPProcessor
+import onnxruntime
 from concurrent.futures import ThreadPoolExecutor
 
 # Local modules
@@ -13,86 +14,84 @@ from mongodb_logger import log_event
 
 # Configuration
 MODEL_NAME = "openai/clip-vit-base-patch32"
+MODELS_DIR = os.path.join(os.path.dirname(__file__), "../models")
 PRODUCT_IMAGES_DIR = os.path.join(os.path.dirname(__file__), "..", "images")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 class Matcher:
-    def __init__(self, model_name: str = MODEL_NAME):
-        # Load CLIP model + processor
+    def __init__(self, use_quantized: bool = True):
         self.device = DEVICE
-        self.model = CLIPModel.from_pretrained(model_name).to(self.device)
-        self.processor = CLIPProcessor.from_pretrained(model_name)
-        self.model.eval()
-
-        # Initialize MongoDB metadata store
+        self.use_quantized = use_quantized
+        self.processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+        model_type = "fp16" if use_quantized else "fp32"
+        model_path = os.path.join(MODELS_DIR, f"clip_{model_type}.onnx")
+        self.ort_session = onnxruntime.InferenceSession(
+            model_path,
+            providers=['CUDAExecutionProvider' if DEVICE == 'cuda' else 'CPUExecutionProvider']
+        )
         self.meta_db = MongoDB()
 
     def embed_image(self, image_path: str) -> np.ndarray:
-
         try:
             img = Image.open(image_path).convert("RGB")
-            inputs = self.processor(images=img, return_tensors="pt").to(self.device)
-            with torch.no_grad():
-                emb = self.model.get_image_features(**inputs)
-            emb = emb / emb.norm(p=2, dim=-1, keepdim=True)
-            return emb[0].cpu().numpy().astype(np.float32)
+            inputs = self.processor(images=img, return_tensors="pt")
+            dtype = np.float16 if self.use_quantized else np.float32
+            pixel_values = inputs.pixel_values.numpy().astype(dtype)
+            ort_inputs = {
+                "pixel_values": pixel_values,
+                "input_ids": np.zeros((1, 77), dtype=np.int64),  # Dummy text
+                "attention_mask": np.zeros((1, 77), dtype=np.int64)
+            }
+            emb = self.ort_session.run(["image_embeds"], ort_inputs)[0][0]
+            return emb.astype(np.float32)
         except Exception as e:
             log_event(f"Error embedding image '{image_path}': {e}")
             return np.zeros((512,), dtype=np.float32)
-        
+
     def embed_text(self, text: str) -> np.ndarray:
         try:
-            inputs = self.processor(text=[text], return_tensors="pt", padding=True).to(self.device)
-            with torch.no_grad():
-                emb = self.model.get_text_features(**inputs)
-            emb = emb / emb.norm(p=2, dim=-1, keepdim=True)
-            return emb[0].cpu().numpy().astype(np.float32)
+            inputs = self.processor(text=[text], return_tensors="pt", padding=True)
+            dtype = np.float16 if self.use_quantized else np.float32
+            ort_inputs = {
+                "input_ids": inputs["input_ids"].numpy(),
+                "attention_mask": inputs["attention_mask"].numpy(),
+                "pixel_values": np.zeros((1, 3, 224, 224), dtype=dtype)
+            }
+            emb = self.ort_session.run(["text_embeds"], ort_inputs)[0][0]
+            return emb.astype(np.float32)
         except Exception as e:
             log_event(f"Error embedding text '{text}': {e}")
             return np.zeros((512,), dtype=np.float32)
 
     def match(self, query_emb: np.ndarray, top_k: int = 5):
-        """
-        Match the query embedding against the vector database and fetch metadata for the top results.
-        Dynamically adjusts the query buffer size and parallelizes metadata fetching for speed.
-        """
-        buffer = top_k  # Start with a buffer equal to top_k
+        buffer = top_k
         unique_matches = []
 
         while True:
-            # Query the vector database
             matches = query_vector(query_emb, top_k=buffer)
-
-            # Deduplicate by product ID, keeping the highest-scoring instance
             seen = set()
             unique_matches = []
             for pid, score in matches:
-                base_pid = pid.split("_")[0]  # Extract base product ID (e.g., "001")
+                base_pid = pid.split("_")[0]
                 if base_pid not in seen:
                     seen.add(base_pid)
                     unique_matches.append((pid, score))
                 if len(unique_matches) >= top_k:
-                    break  # Early exit if we have enough unique products
-
-            # If we have enough unique matches or the buffer is too large, stop querying
+                    break
             if len(unique_matches) >= top_k or buffer > top_k * 10:
                 break
-
-            # Increase the buffer size for the next iteration
             buffer *= 2
 
-        # Fetch metadata for the top K unique products in parallel
         def fetch_metadata(pid):
-            return self.meta_db.get_product(pid.split("_")[0])  # Fetch base product metadata
+            return self.meta_db.get_product(pid.split("_")[0])
 
         with ThreadPoolExecutor() as executor:
             metadata = list(executor.map(fetch_metadata, [pid for pid, _ in unique_matches[:top_k]]))
 
-        # Combine results with metadata
         results = []
         for (pid, score), meta in zip(unique_matches[:top_k], metadata):
             results.append({
-                "id": pid.split("_")[0],  # Return base product ID
+                "id": pid.split("_")[0],
                 "score": score,
                 "metadata": meta
             })
@@ -107,7 +106,6 @@ class Matcher:
             meta = res.get('metadata', {}) or {}
 
             print(f"• {pid} (score: {score:.4f})")
-            # Always print raw metadata for clarity
             print(f"  Raw metadata: {meta}")
 
             if meta:
@@ -115,7 +113,6 @@ class Matcher:
                 for k, v in meta.items():
                     print(f"    {k}: {v}")
 
-            # Optionally show image if exists
             img_path = os.path.join(PRODUCT_IMAGES_DIR, f"{pid}.jpg")
             if os.path.exists(img_path):
                 try:
@@ -132,9 +129,12 @@ def main():
     group.add_argument("--image", type=str, help="Path to query image")
     group.add_argument("--text", type=str, help="Text query string")
     parser.add_argument("--top_k", type=int, default=2, help="Number of top matches to return")
+    parser.add_argument("--use_quantized", action="store_true", 
+                      help="Use quantized FP16 model instead of FP32 ONNX model")
     args = parser.parse_args()
 
-    matcher = Matcher()
+    matcher = Matcher(use_quantized=args.use_quantized)
+    
     if args.image:
         q_emb = matcher.embed_image(args.image)
     else:

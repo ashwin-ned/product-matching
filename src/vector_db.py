@@ -1,4 +1,3 @@
-# src/vector_db.py
 """
 Initialize Pinecone client, upsert CLIP embeddings, and query vectors using the Pinecone SDK.
 """
