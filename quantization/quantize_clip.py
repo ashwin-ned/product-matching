@@ -43,7 +43,6 @@ def main():
     print(f"Creating models directory: {MODELS_DIR}")
     os.makedirs(MODELS_DIR, exist_ok=True)
 
-    # 1. Load CLIP model and processor from Hugging Face
     print(f"Loading model and processor for {MODEL_NAME}...")
     try:
         model = CLIPModel.from_pretrained(MODEL_NAME)

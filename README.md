@@ -80,7 +80,7 @@ Follow these steps to set up and run the project:
     ```
 
 3.  **Configure Environment Variables**:
-    Create a `.env` file in the project's `src/` folder (or the root, adjust paths in scripts if necessary) with the following keys:
+    Create a `.env` file in the project's `src/` folder (or the root and adjust paths in scripts if necessary) with the following keys:
     ```env
     MONGO_URI="your_mongo_connection_string"
     MONGO_DB_NAME="your_db_name"
@@ -93,18 +93,19 @@ Follow these steps to set up and run the project:
     PINECONE_API_KEY="your_pinecone_api_key"
     PINECONE_ENVIRONMENT="your_pinecone_env"
     ```
+4.  **Quantize the Model**:
+    To optimize the model for inference, run the quantization script in `./quantization/quantize_clip.py`. (optionally test that the models are quantized correctly with `./quantization/test_inference.py`):
+    ```bash
+    python quantization/quantize_clip.py
+    ```
 
-4.  **Ingest Data**:
+5.  **Ingest Data**:
     Run the data ingestion script. This script reads images from `./images/` and metadata from `./metadata/products.json`, generates CLIP embeddings, upserts them to Pinecone, and stores metadata in MongoDB.
     ```bash
-    python ingest_data.py
+    python ingest_data.py --images_dir ../images/ --metadata_file ../metadata/products.json 
     ```
 
-5.  **Quantize the Model (Optional but Recommended)**:
-    To optimize the model for inference, run the quantization script:
-    ```bash
-    python quantization/quantize_model.py
-    ```
+
 6.  **Run the Gradio Demo**:
     Launch the web interface:
     ```bash
