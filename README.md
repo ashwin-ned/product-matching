@@ -116,7 +116,7 @@ Follow these steps to set up and run the project:
 5.  **Ingest Data**:
     Run the data ingestion script. This script reads images from `./images/` and metadata from `./metadata/products.json`, generates CLIP embeddings, upserts them to Pinecone, and stores metadata in MongoDB.
     ```bash
-    python ingest_data.py --images_dir ../images/ --metadata_file ../metadata/products.json 
+    cd src && python ingest_data.py --images_dir ../images/ --metadata_file ../metadata/products.json 
     ```
 
 
