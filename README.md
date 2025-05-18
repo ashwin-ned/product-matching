@@ -36,7 +36,7 @@ The matching process follows these steps:
 ```
 .
 ├── app.py                  # Gradio demo interface
-├── data_ingestion.py         # Scripts to process images & metadata
+├── data_ingestion.py       # Script to process images & metadata
 ├── images/                 # Product images (for ingestion)
 ├── media/                  # Demo GIFs and other assets
 ├── metadata/               # JSON metadata files
