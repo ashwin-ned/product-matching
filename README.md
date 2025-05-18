@@ -10,98 +10,112 @@ An end-to-end pipeline for visual product matching using multimodal embeddings a
 
 ## 🚀 Overview
 
-This system lets you match an input image (or text query) against a product catalog by combining:
+This system enables matching an input image or text query against a product catalog by leveraging:
 
-1. **CLIP**  
-   Generates joint image/text embeddings (512-dimensional).
-2. **Pinecone**  
-   A high-performance vector database for k-nearest-neighbors search.
-3. **MongoDB**  
-   Stores and retrieves structured product metadata.
+1.  **CLIP (Contrastive Language-Image Pre-training)**: Generates 512-dimensional joint embeddings for images and text.
+2.  **Pinecone**: A high-performance vector database used for efficient k-nearest-neighbors (k-NN) search on embeddings.
+3.  **MongoDB**: Stores and retrieves structured product metadata.
 
 ### 🔄 Architecture Flow
 
-1. **Input**  
-   - Image (or text) is fed to CLIP.  
-   - CLIP produces a 512-dim embedding.  
-2. **Vector Search**  
-   - Pinecone finds the top-5 nearest embeddings in the product index.  
-3. **Metadata Lookup**  
-   - MongoDB returns full product details (name, price, category, etc.) for each match.
+The matching process follows these steps:
+
+1.  **Input Processing**:
+    *   An input image or text query is provided to the CLIP model.
+    *   CLIP generates a 512-dimensional embedding vector representing the input.
+2.  **Vector Search**:
+    *   The generated embedding is used to query the Pinecone vector database.
+    *   Pinecone returns the top-5 nearest embeddings from the indexed product catalog.
+3.  **Metadata Lookup**:
+    *   For each of the top-5 matches, corresponding product details (name, price, category, etc.) are retrieved from MongoDB.
 
 ---
 
 ## 📂 Repository Structure
-├── data_ingestion/ # Scripts to process images & metadata
-├── models/ # Original & quantized CLIP weights
-├── quantization/ # Utilities for model quantization
-├── media/ # Demo GIFs and other assets
-├── images/ # Product images (for ingestion)
-├── metadata/ # JSON metadata files
-├── app.py # Gradio demo interface
-├── quantize_model.py # Standalone quantization script
-└── requirements.txt # Python dependencies
 
-
+```
+.
+├── app.py                  # Gradio demo interface
+├── data_ingestion/         # Scripts to process images & metadata
+├── images/                 # Product images (for ingestion)
+├── media/                  # Demo GIFs and other assets
+├── metadata/               # JSON metadata files
+├── models/                 # Original & quantized CLIP weights
+├── quantization/           # Utilities for model quantization
+├── quantize_model.py       # Standalone quantization script
+└── requirements.txt        # Python dependencies
+```
 
 ---
 
-## ⚙️ Setup & Installation
+## ⚙️ Setup and Installation
 
-1. **Clone & install**
-   ```bash
-   git clone https://github.com/yourusername/product-matching-pipeline.git
-   cd product-matching-pipeline
-   pip install -r requirements.txt
+Follow these steps to set up and run the project:
 
-2. **Prepare images & metadata**
+1.  **Clone the Repository and Install Dependencies**:
+    ```bash
+    git clone https://github.com/yourusername/product-matching-pipeline.git
+    cd product-matching-pipeline
+    pip install -r requirements.txt
+    ```
 
-Place all product images in ./images/.
+2.  **Prepare Images and Metadata**:
+    *   Place all product images in the `./images/` directory.
+    *   Create a single JSON file named `products.json` in the `./metadata/` directory. This file should contain an array of product entries.
 
-Add a single JSON file ./metadata/products.json containing an array of product entries.
+    **Example `products.json` entry**:
+    ```json
+    {
+      "id": "002",
+      "name": "Vanilla & Coconut Shower Gel",
+      "category": "Personal Care",
+      "price": 5.49,
+      "description": "Refreshing shower gel with vanilla fragrance and coconut extracts.",
+      "images": ["002_1.jpg", "002_2.jpg"]
+    }
+    ```
 
-Example entry for a product in products.json
-{
-  "id": "002",
-  "name": "Vanilla & Coconut Shower Gel",
-  "category": "Personal Care",
-  "price": 5.49,
-  "description": "Refreshing shower gel with vanilla fragrance and coconut extracts.",
-  "images": ["002_1.jpg", "002_2.jpg"]
-}
+3.  **Configure Environment Variables**:
+    Create a `.env` file in the project's `src/` folder (or the root, adjust paths in scripts if necessary) with the following keys:
+    ```env
+    MONGO_URI="your_mongo_connection_string"
+    MONGO_DB_NAME="your_db_name"
+    MONGO_COLLECTION="products_collection_name"
 
-3. **Configure environment variables**
-Create a .env file in the project src folder with the following keys:
+    LOGGER_MONGO_URI="your_logger_connection_string"
+    LOGGER_DB_NAME="your_logger_db_name"
+    LOGGER_MONGO_COLLECTION="your_logger_collection_name"
 
-MONGO_URI="your_mongo_connection_string"
-MONGO_DB_NAME="your_db_name"
-MONGO_COLLECTION="products_collection_name"
+    PINECONE_API_KEY="your_pinecone_api_key"
+    PINECONE_ENVIRONMENT="your_pinecone_env"
+    ```
 
-LOGGER_MONGO_URI="your_logger_connection_string"
-LOGGER_DB_NAME="your_logger_db_name"
-LOGGER_MONGO_COLLECTION="your_logger_collection_name"
+4.  **Ingest Data**:
+    Run the data ingestion script. This script reads images from `./images/` and metadata from `./metadata/products.json`, generates CLIP embeddings, upserts them to Pinecone, and stores metadata in MongoDB.
+    ```bash
+    python data_ingestion/ingest.py
+    ```
+    *(Note: Ensure the script path `data_ingestion/ingest.py` is correct based on your project structure. Your workspace shows `ingest_data.py` in `src/`.)*
 
-PINECONE_API_KEY="your_pinecone_api_key"
-PINECONE_ENVIRONMENT="your_pinecone_env"
+5.  **Quantize the Model (Optional but Recommended)**:
+    To optimize the model for inference, run the quantization script:
+    ```bash
+    python quantization/quantize_model.py
+    ```
+    *(Note: Ensure the script path `quantization/quantize_model.py` is correct. Your workspace shows `quantize_model.py` in `src/`.)*
 
-4. **Ingest Data**
-python data_ingestion/ingest.py
+6.  **Run the Gradio Demo**:
+    Launch the web interface:
+    ```bash
+    python app.py
+    ```
+    This opens a local web interface where you can query by image or text.
 
--Reads ./images/ and ./metadata/products.json
+---
 
--Generates CLIP embeddings and upserts them to Pinecone
+## 📝 Usage
 
--Stores metadata in MongoDB
+Once the Gradio demo is running:
 
-5. **Quantize the Model** 
-python quantization/quantize_model.py
-
-6. **Run the Gradio Demo**
-python app.py
-
-Opens a local web interface where you can query by image or text.
-
-📝 **Usage**
--Image query: upload a photo of a product; the app returns the top-5 catalog matches.
-
--Text query: type a product description; the app performs the same embedding + search pipeline.
+*   **Image Query**: Upload a photo of a product. The application will display the top-5 matching products from the catalog.
+*   **Text Query**: Type a description of a product. The application will perform the same embedding and search process to find and display the top-5 matches.
