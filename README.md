@@ -36,15 +36,22 @@ The matching process follows these steps:
 
 ```
 .
-├── app.py                  # Gradio demo interface
-├── data_ingestion.py       # Script to process images & metadata
+├── src/        
+    ├── app.py                  # Gradio demo interface
+    ├── ingest_data.py          # Script to process images & metadata
+    ├── matcher.py              # Semantic matching module
+    ├── mongo_db.py             # MongoDB client for metadata
+    ├── mongodb_logger.py       # MongoDB logger
+    ├── vector_db.py          # Pinecone client for vector database
 ├── images/                 # Product images (for ingestion)
+├── example_query_images/   # Example query images
 ├── media/                  # Demo GIFs and other assets
 ├── metadata/               # JSON metadata files
-├── models/                 # For storing quantized model (FP32 & FP16)
-├── quantization/           # Scripts for model quantization
-├── .env                    # Environment file with API keys for Pinecone & MongoDB
+├── models/                 # For storing quantized onnx models (FP32 & FP16)
+├── quantization/           # Scripts for model quantization    
 ├── environment.yml         # Conda environment file
+├── README.md               # Readme
+├── .env                    # Environment file with API keys for Pinecone & MongoDB
 └── requirements.txt        # Python dependencies
 
 ```
