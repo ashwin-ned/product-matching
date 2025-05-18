@@ -193,6 +193,7 @@ dependencies:
   - numpy=1.26.4=py310h5f9d8c6_0
   - numpy-base=1.26.4=py310hb5e798b_0
   - onnx=1.16.2=py310hf579258_1
+  - onnxmltools=1.12.0=pyhe01879c_2
   - openh264=2.1.1=h4ff587b_0
   - openjpeg=2.5.2=he7f1fd0_0
   - openssl=3.5.0=h7b32b05_1
@@ -332,4 +333,3 @@ dependencies:
       - tensorrt-lean-cu12-libs==10.10.0.31
       - torch==2.5.1
       - triton==3.3.0
-prefix: /home/ash/miniconda3/envs/product-matcher

@@ -53,7 +53,7 @@ def get_embeddings(session, pixel_values, text=None, processor=None):
 
 def main():
     # Configuration
-    models_dir = os.path.join(os.path.dirname(__file__), "models")
+    models_dir = os.path.join(os.path.dirname(__file__), "../models")
     onnx_model_path = os.path.join(models_dir, "clip_fp16.onnx")
     image_dir = os.path.join(os.path.dirname(__file__), "..", "images")
     

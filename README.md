@@ -67,6 +67,8 @@ Follow these steps to set up and run the project:
     git clone https://github.com/yourusername/product-matching-pipeline.git
     cd product-matching-pipeline
     conda env create -f environment.yml
+    
+    or install with pip:
     pip install -r requirements.txt
     ```
 
@@ -103,6 +105,8 @@ Follow these steps to set up and run the project:
     LOGGER_DB_NAME="your_logger_db_name"
     LOGGER_MONGO_COLLECTION="your_logger_collection_name"
     ```
+    **Warning**: Make sure that the values in the `.env` variable keys are not separated by a newline '\n'. (Can result in invalid header value error.)
+
 4.  **Quantize the Model**:
     To optimize the model for inference, run the quantization script in `./quantization/quantize_clip.py`. (optionally test that the models are quantized correctly with `./quantization/test_inference.py`):
     ```bash
