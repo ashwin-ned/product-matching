@@ -13,7 +13,7 @@ An end-to-end pipeline for visual product matching using multimodal embeddings a
 This system enables matching an input image or text query against a product catalog by leveraging:
 
 1.  **CLIP (Contrastive Language-Image Pre-training)**: Generates 512-dimensional joint embeddings for images and text.
-2.  **Pinecone**: A high-performance vector database used for efficient k-nearest-neighbors (k-NN) search on embeddings.
+2.  **Pinecone**: A high-performance vector database used for efficient nearest-neighbors search using embeddings.
 3.  **MongoDB**: Stores and retrieves structured product metadata.
 
 ### 🔄 Architecture Flow
@@ -25,9 +25,9 @@ The matching process follows these steps:
     *   CLIP generates a 512-dimensional embedding vector representing the input.
 2.  **Vector Search**:
     *   The generated embedding is used to query the Pinecone vector database.
-    *   Pinecone returns the top-5 nearest embeddings from the indexed product catalog.
+    *   Pinecone returns the nearest embeddings from the indexed product catalog using cosine similarity.
 3.  **Metadata Lookup**:
-    *   For each of the top-5 matches, corresponding product details (name, price, category, etc.) are retrieved from MongoDB.
+    *   For each of the top matches, corresponding product details (name, price, category, etc.) are retrieved from MongoDB.
 
 ---
 
@@ -96,9 +96,8 @@ Follow these steps to set up and run the project:
 4.  **Ingest Data**:
     Run the data ingestion script. This script reads images from `./images/` and metadata from `./metadata/products.json`, generates CLIP embeddings, upserts them to Pinecone, and stores metadata in MongoDB.
     ```bash
-    python data_ingestion/ingest.py
+    python ingest_data.py
     ```
-    *(Note: Ensure the script path `data_ingestion/ingest.py` is correct based on your project structure. Your workspace shows `ingest_data.py` in `src/`.)*
 
 5.  **Quantize the Model (Optional but Recommended)**:
     To optimize the model for inference, run the quantization script:
@@ -118,5 +117,5 @@ Follow these steps to set up and run the project:
 
 Once the Gradio demo is running:
 
-*   **Image Query**: Upload a photo of a product. The application will display the top-5 matching products from the catalog.
-*   **Text Query**: Type a description of a product. The application will perform the same embedding and search process to find and display the top-5 matches.
+*   **Image Query**: Upload a photo of a product. The application will display the top-K matching products from the catalog or the top match.
+*   **Text Query**: Type a description of a product. The application will perform the same embedding and search process to find and display the top-K matches.
